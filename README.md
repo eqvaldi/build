@@ -45,7 +45,7 @@
 
 ```bash
 apt-get -y install git
-git clone --depth=1 --branch=main https://github.com/armbian/build
+git clone --depth=1 --branch=main https://github.com/Eqvaldi-deer/build.git
 cd build
 ./compile.sh
 ```
