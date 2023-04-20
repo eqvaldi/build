@@ -198,11 +198,23 @@ function do_main_configuration() {
 		fastgit)
 			GITHUB_SOURCE='https://hub.fastgit.xyz'
 			;;
+		ghproxy)
+			GITHUB_SOURCE='https://ghproxy.com/https://github.com'
+			;;
 		gitclone)
 			GITHUB_SOURCE='https://gitclone.com/github.com'
 			;;
 		*)
 			GITHUB_SOURCE='https://github.com'
+			;;
+	esac
+
+	case $GHCR_MIRROR in
+		dockerproxy)
+			GHCR_SOURCE='ghcr.dockerproxy.com'
+			;;
+		*)
+			GHCR_SOURCE='ghcr.io'
 			;;
 	esac
 
@@ -309,10 +321,10 @@ function do_extra_configuration() {
 		fi
 	fi
 
-	if [[ "${ARCH}" == "arm64" ]]; then
-		if [[ -n ${CUSTOM_UBUNTU_MIRROR_ARM64} ]]; then
-			display_alert "Using custom ports/arm64 mirror" "${CUSTOM_UBUNTU_MIRROR_ARM64}" "info"
-			UBUNTU_MIRROR="${CUSTOM_UBUNTU_MIRROR_ARM64}"
+	if [[ "${ARCH}" != "i386" && "${ARCH}" != "amd64" ]]; then # ports are not present on all mirrors
+		if [[ -n ${CUSTOM_UBUNTU_MIRROR_PORTS} ]]; then
+			display_alert "Using custom ports/${ARCH} mirror" "${CUSTOM_UBUNTU_MIRROR_PORTS}" "info"
+			UBUNTU_MIRROR="${CUSTOM_UBUNTU_MIRROR_PORTS}"
 		fi
 	fi
 
