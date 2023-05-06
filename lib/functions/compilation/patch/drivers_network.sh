@@ -185,7 +185,6 @@ driver_rtl8811_rtl8812_rtl8814_rtl8821() {
 		# fix compilation for kernels >= 6.3
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8812au-6.3.patch" "applying"
 
-
 	fi
 
 }
@@ -422,9 +421,6 @@ driver_rtl88x2cs() {
 
 		# fix compilation for kernels >= 5.4
 		process_patch_file "${SRC}/patch/misc/wireless-rtl88x2cs-Fix-VFS-import.patch" "applying"
-
-		# fix compilation for kernels >= 6.3
-		process_patch_file "${SRC}/patch/misc/wireless-rtl88x2cs-6.3.0.patch" "applying"
 	fi
 }
 #_bt for blueteeth
@@ -542,6 +538,9 @@ driver_rtl8822BS() {
 		cp -R "${SRC}/cache/sources/rtl8822bs/${rtl8822bsver#*:}"/{core,hal,include,os_dep,platform,bluetooth,getAP,rtl8822b.mk} \
 			"$kerneldir/drivers/net/wireless/rtl8822bs"
 
+		# Remove some leftover binary files that shouldn't be there. firmware?
+		rm -fv "$kerneldir/drivers/net/wireless/rtl8822bs/bluetooth/rtl8822b_config.bin" "$kerneldir/drivers/net/wireless/rtl8822bs/bluetooth/rtl8822b_fw.bin"
+
 		# Makefile
 		cp "${SRC}/cache/sources/rtl8822bs/${rtl8822bsver#*:}/Makefile" \
 			"$kerneldir/drivers/net/wireless/rtl8822bs/Makefile"
@@ -568,17 +567,23 @@ driver_rtl8822BS() {
 
 driver_uwe5622_allwinner() {
 	# Unisoc uwe5622 wireless Support
-	if linux-version compare "${version}" ge 4.4 && linux-version compare "${version}" le 6.2 && [[ "$LINUXFAMILY" == sunxi* || "$LINUXFAMILY" == rockchip64 ]]; then
+	if linux-version compare "${version}" ge 4.4 && linux-version compare "${version}" le 6.3 && [[ "$LINUXFAMILY" == sunxi* || "$LINUXFAMILY" == rockchip64 ]]; then
 		display_alert "Adding" "Drivers for Unisoc uwe5622 found on some Allwinner and Rockchip boards" "info"
 
-		process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner.patch" "applying"
-		process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner-bugfix.patch" "applying"
+		if linux-version compare "${version}" ge 6.3; then
+			process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner-v6.3.patch" "applying"
+			process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner-bugfix-v6.3.patch" "applying"
+		else
+			process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner.patch" "applying"
+			process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-allwinner-bugfix.patch" "applying"
+		fi
 		process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-warnings.patch" "applying"
 
 		# Add to section Makefile
 		echo "obj-\$(CONFIG_SPARD_WLAN_SUPPORT) += uwe5622/" >> "$kerneldir/drivers/net/wireless/Makefile"
 
-		if linux-version compare "${version}" lt 6.1; then
+		# Don't add this to legacy (<5.0) kernels.
+		if linux-version compare "${version}" ge 5.0 && linux-version compare "${version}" lt 6.1; then
 			process_patch_file "${SRC}/patch/misc/wireless-driver-for-uwe5622-park-link-pre-v6.1.patch" "applying"
 		fi
 
@@ -634,7 +639,7 @@ driver_rtl8723cs() {
 	if linux-version compare "${version}" ge 6.3; then
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Port-to-6.3.patch" "applying"
 	fi
-
+	
 }
 
 patch_drivers_network() {

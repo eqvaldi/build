@@ -143,8 +143,8 @@ case $BRANCH in
 	edge)
 
 		KERNELPATCHDIR='rockchip64-'$BRANCH
-		declare -g KERNEL_MAJOR_MINOR="6.1" # Major and minor versions of this kernel.
-		KERNELBRANCH="branch:linux-6.1.y"
+		declare -g KERNEL_MAJOR_MINOR="6.3" # Major and minor versions of this kernel.
+		KERNELBRANCH="branch:linux-6.3.y"
 		LINUXFAMILY=rockchip64
 		LINUXCONFIG='linux-rockchip64-'$BRANCH
 
@@ -189,7 +189,7 @@ prepare_boot_configuration() {
 	if [[ $BOOT_SUPPORT_SPI == yes ]]; then
 
 		if [[ "${BOOT_SPI_RKSPI_LOADER:-"no"}" != "yes" ]]; then
-			UBOOT_TARGET_MAP="BL31=$RKBIN_DIR/$BL31_BLOB tpl/u-boot-tpl.bin spl/u-boot-spl.bin u-boot.itb ${UBOOT_TARGET_MAP} rkspi_loader.img"
+			UBOOT_TARGET_MAP="${UBOOT_TARGET_MAP} tpl/u-boot-tpl.bin spl/u-boot-spl.bin u-boot.itb rkspi_loader.img"
 		else
 			UBOOT_TARGET_MAP="${UBOOT_TARGET_MAP} rkspi_loader.img"
 		fi
