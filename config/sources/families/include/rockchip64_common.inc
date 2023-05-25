@@ -42,7 +42,9 @@ RKBIN_DIR="$SRC/cache/sources/rkbin-tools"
 BOOT_SOC=${BOOT_SOC:=$(expr $BOOTCONFIG : '.*\(rk[[:digit:]]\+.*\)_.*' || true)}
 
 if [[ "a${BOOT_SOC}a" == "aa" ]]; then
-	display_alert "Could not determine BOOT_SOC from BOOTCONFIG" "BOOTCONFIG: '${BOOTCONFIG}'" "warning"
+	if [[ "${BOOTCONFIG}" != "" && "${BOOTCONFIG}" != " none" ]]; then # only warn if BOOTCONFIG set and not 'none'
+		display_alert "Could not determine BOOT_SOC from BOOTCONFIG" "BOOTCONFIG: '${BOOTCONFIG}'" "warning"
+	fi
 else
 	display_alert "Determined BOOT_SOC from BOOTCONFIG" "BOOT_SOC: '${BOOT_SOC}'; BOOTCONFIG: '${BOOTCONFIG}'" "info"
 fi
@@ -133,8 +135,8 @@ case $BRANCH in
 
 	current)
 
-		declare -g KERNEL_MAJOR_MINOR="5.15" # Major and minor versions of this kernel.
-		KERNELBRANCH="branch:linux-5.15.y"
+		declare -g KERNEL_MAJOR_MINOR="6.1" # Major and minor versions of this kernel.
+		KERNELBRANCH="branch:linux-6.1.y"
 		KERNELPATCHDIR='rockchip64-'$BRANCH
 		LINUXFAMILY=rockchip64
 		LINUXCONFIG='linux-rockchip64-'$BRANCH

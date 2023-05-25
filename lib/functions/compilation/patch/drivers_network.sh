@@ -63,6 +63,10 @@ driver_rtl8189ES() {
 		sed -i '/source "drivers\/net\/wireless\/ti\/Kconfig"/a source "drivers\/net\/wireless\/rtl8189es\/Kconfig"' \
 			"$kerneldir/drivers/net/wireless/Kconfig"
 
+		# Disable debug
+		sed -i "s/^CONFIG_RTW_DEBUG.*/CONFIG_RTW_DEBUG = n/" \
+			"$kerneldir/drivers/net/wireless/rtl8189es/Makefile"
+
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8189es-Fix-uninitialized-cfg80211-chan-def.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8189es-Fix-p2p-go-advertising.patch" "applying"
 
@@ -102,6 +106,10 @@ driver_rtl8189FS() {
 		echo "obj-\$(CONFIG_RTL8189FS) += rtl8189fs/" >> "$kerneldir/drivers/net/wireless/Makefile"
 		sed -i '/source "drivers\/net\/wireless\/ti\/Kconfig"/a source "drivers\/net\/wireless\/rtl8189fs\/Kconfig"' \
 			"$kerneldir/drivers/net/wireless/Kconfig"
+
+		# Disable debug
+		sed -i "s/^CONFIG_RTW_DEBUG.*/CONFIG_RTW_DEBUG = n/" \
+			"$kerneldir/drivers/net/wireless/rtl8189fs/Makefile"
 
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8189fs-fix-p2p-go-advertising.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8189fs-fix-and-enable-secondary-iface.patch" "applying"
@@ -516,7 +524,7 @@ driver_rtl8723DU() {
 		# fix compilation for kernels >= 5.4
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723du-Fix-VFS-import.patch" "applying"
 
-		# fix compilation for kernels >= 6.3
+		# fix compilation for kernels >=  6.3
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723du-6.3.patch" "applying"
 
 	fi
@@ -598,7 +606,8 @@ driver_rtl8723cs() {
 	# Realtek rtl8723cs wireless support.
 	# Driver has been borrowed from sunxi 6.1 megous patch archive.
 	# Applies only from linux 6.1 onwards, so older kernel archives does not require to be altered
-	if linux-version compare "${version}" ge 6.1; then
+	# It was disabled from bcm2711 as that kernel is not fully in sync with mainline and as its probably not needed there anyway
+	if linux-version compare "${version}" ge 6.1 && [[ "$LINUXFAMILY" != bcm2711 ]]; then
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Add-a-new-driver-v5.12.2-7-g2de5ec386.20201013_beta.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Make-the-driver-compile-and-probe-drop-rockchip-platform.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Enable-OOB-interrupt.patch" "applying"
@@ -629,8 +638,12 @@ driver_rtl8723cs() {
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Port-to-6.1.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Port-to-6.1-rc1.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/dt-bindings-net-bluetooth-Add-rtl8723bs-bluetooth.patch" "applying"
-		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/bluetooth-btrtl-quirk-local-ext-features.patch" "applying"
-		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/Bluetooth-btrtl-add-support-for-the-RTL8723CS.patch" "applying"
+
+		if linux-version compare "${version}" ge 6.2 && linux-version compare "${version}" lt 6.3; then # landed in 6.1.30/6.3.4 # keep for 6.2
+			process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/bluetooth-btrtl-quirk-local-ext-features.patch" "applying"
+			process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/Bluetooth-btrtl-add-support-for-the-RTL8723CS.patch" "applying"
+		fi
+
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/Bluetooth-hci_h5-Add-support-for-binding-RTL8723CS-with-device-.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/bluetooth-h5-Don-t-re-initialize-rtl8723cs-on-resume.patch" "applying"
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/bluetooth-btrtl-add-rtl8703bs.patch" "applying"
@@ -639,7 +652,7 @@ driver_rtl8723cs() {
 	if linux-version compare "${version}" ge 6.3; then
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8723cs/8723cs-Port-to-6.3.patch" "applying"
 	fi
-	
+
 }
 
 patch_drivers_network() {
