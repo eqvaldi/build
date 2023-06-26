@@ -16,6 +16,16 @@ declare -g BOOTENV_FILE='sunxi.txt'
 UBOOT_TARGET_MAP="${UBOOT_TARGET_MAP:-;;u-boot-sunxi-with-spl.bin}"
 declare -g BOOTSCRIPT='boot-sun50i-next.cmd:boot.cmd'
 declare -g LINUXFAMILY=sunxi64
+declare -g CRUST_TARGET_MAP="scp;;build/scp/scp.bin"
+
+[[ -n "${CRUSTCONFIG}" && -z $CRUSTSOURCE ]] && CRUSTSOURCE='https://github.com/crust-firmware/crust'
+[[ -n "${CRUSTCONFIG}" && -z $CRUSTDIR ]] && CRUSTDIR='crust-sunxi-mainline'
+[[ -n "${CRUSTCONFIG}" && -z $CRUSTBRANCH ]] && CRUSTBRANCH='commit:c308a504853e7fdb47169796c9a832796410ece8'
+[[ -n "${CRUSTCONFIG}" && -z $CRUST_USE_GCC ]] && CRUST_USE_GCC='> 9.1.0'
+[[ -n "${CRUSTCONFIG}" && -z $CRUST_COMPILER ]] && CRUST_COMPILER='or1k-elf-'
+
+# Apply crust patches if crust is enabled
+[[ -n "${CRUSTCONFIG}" ]] && BOOTPATCHDIR="${BOOTPATCHDIR} u-boot-sunxi-crust"
 
 case $BRANCH in
 
@@ -26,7 +36,7 @@ case $BRANCH in
 
 	current)
 		declare -g KERNEL_MAJOR_MINOR="6.1" # Major and minor versions of this kernel.
-		declare -g KERNELBRANCH="tag:v6.1.33"
+		declare -g KERNELBRANCH="tag:v6.1.34"
 		;;
 
 	edge)

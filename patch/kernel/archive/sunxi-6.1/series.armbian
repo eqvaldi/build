@@ -88,12 +88,15 @@
 	patches.armbian/arm64-dts-sun50i-h616-x96-mate-T95-eth-sd-card-hack.patch
 	patches.armbian/arm64-dts-sun50i-h616-x96-mate-add-hdmi.patch
 	patches.armbian/arm64-dts-allwinner-h616-Add-device-node-for-SID.patch
+	patches.armbian/arm64-dts-allwinner-h616-Add-efuse_xlate-cpu-frequency-scaling-v1_6_1.patch
 	patches.armbian/arm64-dts-allwinner-h616-Add-thermal-sensor-and-thermal-zones.patch
 	patches.armbian/arm64-dts-allwinner-h616-Fix-thermal-zones-missing-trips.patch
 	patches.armbian/drv-pmic-add-axp313a.patch
 	patches.armbian/drv-staging-fbtft-add-st7796s.patch
 	patches.armbian/drv-touchscreen-tsc2007-polling.patch
 	patches.armbian/drv-rgb-add-ws2812.patch
+	patches.armbian/arm64-dts-allwinner-h616-LED-green_power_on-red_status_heartbeat.patch
+	patches.armbian/arm64-dts-allwinner-h616-orangepi-zero2-Enable-expansion-board-USB-ports.patch
 ###################
 	patches.armbian/arm64-dts-sun50i-a64-pinebook-enable-Bluetooth.patch
 	patches.armbian/arm64-dts-sun50i-a64-pine64-enable-Bluetooth.patch
