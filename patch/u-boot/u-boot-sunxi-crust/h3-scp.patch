@@ -1,74 +1,7 @@
-From f12a3108458ff425dc6991ba83309f33014ccf2d Mon Sep 17 00:00:00 2001
-From: Samuel Holland <samuel@sholland.org>
-Date: Sat, 9 Oct 2021 10:40:45 -0500
-Subject: [PATCH 01/11] Kconfig: Remove an impossible condition
-
-ARCH_SUNXI selects BINMAN, so the condition "!BINMAN && ARCH_SUNXI"
-is impossible to satisfy.
-
-Signed-off-by: Samuel Holland <samuel@sholland.org>
----
- Kconfig | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/Kconfig b/Kconfig
-index c8c22555a9..f0db8d8570 100644
---- a/Kconfig
-+++ b/Kconfig
-@@ -459,7 +459,7 @@ config BUILD_TARGET
- 	default "u-boot-spl.kwb" if ARCH_MVEBU && SPL
- 	default "u-boot-elf.srec" if RCAR_GEN3
- 	default "u-boot.itb" if !BINMAN && SPL_LOAD_FIT && (ARCH_ROCKCHIP || \
--				ARCH_SUNXI || RISCV || ARCH_ZYNQMP)
-+				RISCV || ARCH_ZYNQMP)
- 	default "u-boot.kwb" if ARCH_KIRKWOOD
- 	default "u-boot-with-spl.bin" if ARCH_AT91 && SPL_NAND_SUPPORT
- 	default "u-boot-with-spl.imx" if ARCH_MX6 && SPL
--- 
-2.34.1
-
-From b1ff292fb030864ad64b73cf2308d1844a0f5374 Mon Sep 17 00:00:00 2001
-From: Samuel Holland <samuel@sholland.org>
-Date: Sat, 9 Oct 2021 10:43:56 -0500
-Subject: [PATCH 02/11] binman: Prevent entries in a section from overlapping
-
-Currently, if the "offset" property is given for an entry, the section's
-running offset is completely ignored. This causes entries to overlap if
-the provided offset is less than the size of the entries earlier in the
-section. Avoid the overlap by only using the provided offset when it is
-greater than the running offset.
-
-The motivation for this change is the rule used by SPL to find U-Boot on
-sunxi boards: U-Boot starts 32 KiB after the start of SPL, unless SPL is
-larger than 32 KiB, in which case U-Boot immediately follows SPL.
-
-Signed-off-by: Samuel Holland <samuel@sholland.org>
----
- tools/binman/entry.py | 4 +++-
- 1 file changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/tools/binman/entry.py b/tools/binman/entry.py
-index 63ec5cea3b..1566e598db 100644
---- a/tools/binman/entry.py
-+++ b/tools/binman/entry.py
-@@ -475,7 +475,9 @@ class Entry(object):
-             if self.offset_unset:
-                 self.Raise('No offset set with offset-unset: should another '
-                            'entry provide this correct offset?')
--            self.offset = tools.align(offset, self.align)
-+        elif self.offset > offset:
-+            offset = self.offset
-+        self.offset = tools.align(offset, self.align)
-         needed = self.pad_before + self.contents_size + self.pad_after
-         needed = tools.align(needed, self.align_size)
-         size = self.size
--- 
-2.34.1
-
-From fd4854be1f1eaeb460f128a6f67d82c5a585aa88 Mon Sep 17 00:00:00 2001
+From 566bc30291896e38b62dcf4677a7f99502e88021 Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 17 Apr 2021 13:33:54 -0500
-Subject: [PATCH 03/11] sunxi: binman: Enable SPL FIT loading for 32-bit SoCs
+Subject: [PATCH 1/9] sunxi: binman: Enable SPL FIT loading for 32-bit SoCs
 
 Now that Crust (SCP firmware) has support for H3, we need a FIT image to
 load it. H3 also needs to load a SoC-specific eGon blob to support CPU 0
@@ -103,15 +36,15 @@ Series-to: sjg
 Signed-off-by: Samuel Holland <samuel@sholland.org>
 ---
  arch/arm/Kconfig               |  1 +
- arch/arm/dts/sunxi-u-boot.dtsi | 46 ++++++++++++++++++++++------------
+ arch/arm/dts/sunxi-u-boot.dtsi | 44 ++++++++++++++++++++++------------
  common/spl/Kconfig             |  7 +++---
- 3 files changed, 35 insertions(+), 19 deletions(-)
+ 3 files changed, 34 insertions(+), 18 deletions(-)
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index d726bbf4b3..cbc8572217 100644
+index da8efdea71..309df7b05d 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -1192,6 +1192,7 @@ config ARCH_SUNXI
+@@ -1169,6 +1169,7 @@ config ARCH_SUNXI
  	imply SPL_GPIO
  	imply SPL_LIBCOMMON_SUPPORT
  	imply SPL_LIBGENERIC_SUPPORT
@@ -120,7 +53,7 @@ index d726bbf4b3..cbc8572217 100644
  	imply SPL_POWER
  	imply SPL_SERIAL
 diff --git a/arch/arm/dts/sunxi-u-boot.dtsi b/arch/arm/dts/sunxi-u-boot.dtsi
-index 0f573e6d7a..e75c690491 100644
+index af419c7e59..1353d6e668 100644
 --- a/arch/arm/dts/sunxi-u-boot.dtsi
 +++ b/arch/arm/dts/sunxi-u-boot.dtsi
 @@ -1,13 +1,19 @@
@@ -150,7 +83,7 @@ index 0f573e6d7a..e75c690491 100644
  #endif
  
  / {
-@@ -34,30 +40,33 @@
+@@ -37,30 +43,33 @@
  			filename = "spl/sunxi-spl.bin";
  		};
  
@@ -172,8 +105,8 @@ index 0f573e6d7a..e75c690491 100644
 -					arch = "arm64";
 +					arch = ARCH;
  					compression = "none";
- 					load = <CONFIG_SYS_TEXT_BASE>;
-+					entry = <CONFIG_SYS_TEXT_BASE>;
+ 					load = <CONFIG_TEXT_BASE>;
++					entry = <CONFIG_TEXT_BASE>;
  
  					u-boot-nodtb {
  					};
@@ -189,7 +122,7 @@ index 0f573e6d7a..e75c690491 100644
  					compression = "none";
  					load = <BL31_ADDR>;
  					entry = <BL31_ADDR>;
-@@ -67,6 +76,7 @@
+@@ -70,6 +79,7 @@
  						missing-msg = "atf-bl31-sunxi";
  					};
  				};
@@ -197,7 +130,7 @@ index 0f573e6d7a..e75c690491 100644
  
  #ifdef SCP_ADDR
  				scp {
-@@ -95,19 +105,23 @@
+@@ -98,12 +108,16 @@
  
  				@config-SEQ {
  					description = "NAME";
@@ -217,19 +150,11 @@ index 0f573e6d7a..e75c690491 100644
  					fdt = "fdt-SEQ";
  				};
  			};
- 		};
- #else
- 		u-boot-img {
--			offset = <CONFIG_SPL_PAD_TO>;
-+			offset = <32768>;
- 		};
- #endif
- 	};
 diff --git a/common/spl/Kconfig b/common/spl/Kconfig
-index 70d97815f0..5707632dd6 100644
+index 2c042ad306..4e52529e69 100644
 --- a/common/spl/Kconfig
 +++ b/common/spl/Kconfig
-@@ -75,7 +75,9 @@ config SPL_SIZE_LIMIT_PROVIDE_STACK
+@@ -76,7 +76,9 @@ config SPL_SIZE_LIMIT_PROVIDE_STACK
  
  config SPL_MAX_SIZE
  	hex "Maximum size of the SPL image, excluding BSS"
@@ -239,16 +164,16 @@ index 70d97815f0..5707632dd6 100644
  	default 0x1b000 if AM33XX && !TI_SECURE_DEVICE
  	default 0x10000 if ARCH_MX6 && !MX6_OCRAM_256KB
  	default 0x7fa0 if SUNXI_SRAM_ADDRESS = 0x10000
-@@ -95,7 +97,7 @@ config SPL_PAD_TO
+@@ -97,7 +99,7 @@ config SPL_PAD_TO
  	default 0x31000 if ARCH_MX6 && MX6_OCRAM_256KB
  	default 0x11000 if ARCH_MX7 || (ARCH_MX6 && !MX6_OCRAM_256KB)
  	default 0x10000 if ARCH_KEYSTONE
 -	default 0x8000 if ARCH_SUNXI && !MACH_SUN50I_H616
 +	default 0x0 if ARCH_SUNXI
+ 	default 0x0 if ARCH_MTMIPS
  	default TPL_MAX_SIZE if TPL_MAX_SIZE > SPL_MAX_SIZE
  	default SPL_MAX_SIZE
- 	help
-@@ -567,8 +569,7 @@ config SPL_MD5
+@@ -576,8 +578,7 @@ config SPL_MD5
  config SPL_FIT_IMAGE_TINY
  	bool "Remove functionality from SPL FIT loading to reduce size"
  	depends on SPL_FIT
@@ -261,10 +186,11 @@ index 70d97815f0..5707632dd6 100644
 -- 
 2.34.1
 
-From 54553ef913d8da8a46d07827073cc049077534b5 Mon Sep 17 00:00:00 2001
+
+From 501729188de546502d939c3cedee7ec1ecb04a7b Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 22:00:22 -0500
-Subject: [PATCH 04/11] sunxi: psci: Avoid hanging when CPU 0 is hot-unplugged
+Subject: [PATCH 2/9] sunxi: psci: Avoid hanging when CPU 0 is hot-unplugged
 
 Do not try to send an SGI from CPU 0 to itself. Since FIQs are masked
 when entering monitor mode, this will hang. Plus, CPU 0 cannot fully
@@ -317,10 +243,11 @@ index e1d3638b5c..738ea8f281 100644
 -- 
 2.34.1
 
-From 431f8e3bbb0e844b2b58794838697c703041ed88 Mon Sep 17 00:00:00 2001
+
+From e9e05a2a43d1641d2d864a06d38f190ee8538211 Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 17:12:57 -0500
-Subject: [PATCH 05/11] sunxi: psci: Add support for H3 CPU 0 hotplug
+Subject: [PATCH 3/9] sunxi: psci: Add support for H3 CPU 0 hotplug
 
 Due to a bug in the H3 SoC, where the CPU 0 hotplug flag cannot be
 written, resuming CPU 0 requires using the "Super Standby" code path in
@@ -346,11 +273,11 @@ Signed-off-by: Samuel Holland <samuel@sholland.org>
  4 files changed, 74 insertions(+), 1 deletion(-)
 
 diff --git a/Makefile b/Makefile
-index 50077027ba..715af7de94 100644
+index 8b030f31be..6810784142 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1006,6 +1006,23 @@ INPUTS-y += u-boot.img
- endif
+@@ -1014,6 +1014,23 @@ ifeq ($(CONFIG_ARCH_ROCKCHIP)_$(CONFIG_SPL_FRAMEWORK),y_)
+ INPUTS-y += u-boot.img
  endif
  
 +ifeq ($(CONFIG_MACH_SUN8I_H3)$(CONFIG_ARMV7_PSCI),yy)
@@ -446,7 +373,7 @@ index 738ea8f281..e6bfd193e4 100644
  	setbits_le32(&cpucfg->dbg_ctrl1, BIT(cpu));
  
 diff --git a/arch/arm/dts/sunxi-u-boot.dtsi b/arch/arm/dts/sunxi-u-boot.dtsi
-index e75c690491..dc00d2d0f9 100644
+index 1353d6e668..5d45157598 100644
 --- a/arch/arm/dts/sunxi-u-boot.dtsi
 +++ b/arch/arm/dts/sunxi-u-boot.dtsi
 @@ -6,7 +6,11 @@
@@ -462,7 +389,7 @@ index e75c690491..dc00d2d0f9 100644
  #define BL31_ADDR	0x00044000
  #define SCP_ADDR	0x00050000
  #elif defined(CONFIG_MACH_SUN50I_H6)
-@@ -78,6 +82,20 @@
+@@ -81,6 +85,20 @@
  				};
  #endif
  
@@ -483,7 +410,7 @@ index e75c690491..dc00d2d0f9 100644
  #ifdef SCP_ADDR
  				scp {
  					description = "SCP firmware";
-@@ -111,6 +129,9 @@
+@@ -114,6 +132,9 @@
  					firmware = "uboot";
  #endif
  					loadables =
@@ -511,10 +438,11 @@ index 608a055892..98e68e068b 100644
 -- 
 2.34.1
 
-From cc1929f388235c3860842cddfee4076ffa91ac0f Mon Sep 17 00:00:00 2001
+
+From 1ebddf814b3f2efeeeabf473c34c366a734688f5 Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 14:58:27 -0500
-Subject: [PATCH 06/11] remoteproc: Add a driver for the Allwinner AR100
+Subject: [PATCH 4/9] remoteproc: Add a driver for the Allwinner AR100
 
 Signed-off-by: Samuel Holland <samuel@sholland.org>
 ---
@@ -676,10 +604,11 @@ index 0000000000..c94f6c752b
 -- 
 2.34.1
 
-From 6d37ee46acf3fa726f151a48d68034f8952b0221 Mon Sep 17 00:00:00 2001
+
+From 53bf73ab3356bc4c05cf4570661cf52e5a0ddc8e Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 15:04:16 -0500
-Subject: [PATCH 07/11] arm: dts: sunxi: h3: Add nodes for AR100 remoteproc
+Subject: [PATCH 5/9] arm: dts: sunxi: h3: Add nodes for AR100 remoteproc
 
 Signed-off-by: Samuel Holland <samuel@sholland.org>
 ---
@@ -721,10 +650,11 @@ index eac2349a23..b88dcd4272 100644
 -- 
 2.34.1
 
-From 6cc77eccccdc82591a43c95a47602ca3c94940dd Mon Sep 17 00:00:00 2001
+
+From 681163212274988bb6d826232da09289c6c2b0ea Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 17 Apr 2021 13:33:54 -0500
-Subject: [PATCH 08/11] sunxi: Enable support for SCP firmware on H3
+Subject: [PATCH 6/9] sunxi: Enable support for SCP firmware on H3
 
 Now that issues with the BROM have been sorted out, we can implement
 PSCI system suspend on H3 by delegating to SCP firmware. Let's start by
@@ -739,7 +669,7 @@ Signed-off-by: Samuel Holland <samuel@sholland.org>
  3 files changed, 12 insertions(+)
 
 diff --git a/arch/arm/dts/sunxi-u-boot.dtsi b/arch/arm/dts/sunxi-u-boot.dtsi
-index dc00d2d0f9..ee4c374b09 100644
+index 5d45157598..36b55c8b80 100644
 --- a/arch/arm/dts/sunxi-u-boot.dtsi
 +++ b/arch/arm/dts/sunxi-u-boot.dtsi
 @@ -9,6 +9,7 @@
@@ -751,7 +681,7 @@ index dc00d2d0f9..ee4c374b09 100644
  #elif defined(CONFIG_MACH_SUN50I) || defined(CONFIG_MACH_SUN50I_H5)
  #define BL31_ADDR	0x00044000
 diff --git a/board/sunxi/board.c b/board/sunxi/board.c
-index ed45ed04f5..980c02a455 100644
+index ca9c1cd9e2..289a9d93cb 100644
 --- a/board/sunxi/board.c
 +++ b/board/sunxi/board.c
 @@ -19,6 +19,7 @@
@@ -762,7 +692,7 @@ index ed45ed04f5..980c02a455 100644
  #include <axp_pmic.h>
  #include <generic-phy.h>
  #include <phy-sun4i-usb.h>
-@@ -883,6 +884,13 @@ int board_late_init(void)
+@@ -881,6 +882,13 @@ int board_late_init(void)
  	usb_ether_init();
  #endif
  
@@ -793,10 +723,11 @@ index 98e68e068b..506ce35707 100644
 -- 
 2.34.1
 
-From 598e27fe78a6879d59ac8cdb29c721736492dad8 Mon Sep 17 00:00:00 2001
+
+From 56b6ac0956fe69cb30d42042d8e20c4fdca4b906 Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 22:43:26 -0500
-Subject: [PATCH 09/11] arm: psci: Add definitions for PSCI v1.1
+Subject: [PATCH 7/9] arm: psci: Add definitions for PSCI v1.1
 
 Add the new option, function IDs, and prototypes for PSCI v1.1
 implementations. In the process, fix some issues with the existing
@@ -807,14 +738,13 @@ definitions:
 Signed-off-by: Samuel Holland <samuel@sholland.org>
 ---
  arch/arm/cpu/armv7/Kconfig    |  3 +++
- arch/arm/cpu/armv8/fwcall.c   |  2 +-
- arch/arm/include/asm/psci.h   |  9 +++++++--
+ arch/arm/include/asm/psci.h   |  5 +++--
  arch/arm/include/asm/system.h | 14 +++++++++-----
  arch/arm/lib/psci-dt.c        |  2 ++
- 5 files changed, 22 insertions(+), 8 deletions(-)
+ 4 files changed, 17 insertions(+), 7 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/Kconfig b/arch/arm/cpu/armv7/Kconfig
-index f1e4e26b8f..c2d0491a37 100644
+index e33e53636a..7d58d1837b 100644
 --- a/arch/arm/cpu/armv7/Kconfig
 +++ b/arch/arm/cpu/armv7/Kconfig
 @@ -80,6 +80,9 @@ choice
@@ -827,27 +757,15 @@ index f1e4e26b8f..c2d0491a37 100644
  config ARMV7_PSCI_1_0
  	bool "PSCI V1.0"
  
-diff --git a/arch/arm/cpu/armv8/fwcall.c b/arch/arm/cpu/armv8/fwcall.c
-index 16914dc1ee..87de09979b 100644
---- a/arch/arm/cpu/armv8/fwcall.c
-+++ b/arch/arm/cpu/armv8/fwcall.c
-@@ -103,7 +103,7 @@ void __noreturn psci_system_reset2(u32 reset_level, u32 cookie)
- {
- 	struct pt_regs regs;
- 
--	regs.regs[0] = ARM_PSCI_0_2_FN64_SYSTEM_RESET2;
-+	regs.regs[0] = ARM_PSCI_1_1_FN64_SYSTEM_RESET2;
- 	regs.regs[1] = PSCI_RESET2_TYPE_VENDOR | reset_level;
- 	regs.regs[2] = cookie;
- 	if (use_smc_for_psci)
 diff --git a/arch/arm/include/asm/psci.h b/arch/arm/include/asm/psci.h
-index 67e9234066..aa351867ee 100644
+index 7343b941ef..27c2d15521 100644
 --- a/arch/arm/include/asm/psci.h
 +++ b/arch/arm/include/asm/psci.h
-@@ -22,8 +22,9 @@
+@@ -22,9 +22,9 @@
  #include <linux/bitops.h>
  #endif
  
+-#define ARM_PSCI_VER_1_1		(0x00010001)
 -#define ARM_PSCI_VER_1_0		(0x00010000)
  #define ARM_PSCI_VER_0_2		(0x00000002)
 +#define ARM_PSCI_VER_1_0		(0x00010000)
@@ -855,26 +773,14 @@ index 67e9234066..aa351867ee 100644
  
  /* PSCI 0.1 interface */
  #define ARM_PSCI_FN_BASE		0x95c1ba5e
-@@ -68,7 +69,6 @@
- #define ARM_PSCI_0_2_FN64_AFFINITY_INFO		ARM_PSCI_0_2_FN64(4)
- #define ARM_PSCI_0_2_FN64_MIGRATE		ARM_PSCI_0_2_FN64(5)
- #define ARM_PSCI_0_2_FN64_MIGRATE_INFO_UP_CPU	ARM_PSCI_0_2_FN64(7)
--#define ARM_PSCI_0_2_FN64_SYSTEM_RESET2		ARM_PSCI_0_2_FN64(18)
- 
- /* PSCI 1.0 interface */
- #define ARM_PSCI_1_0_FN_PSCI_FEATURES		ARM_PSCI_0_2_FN(10)
-@@ -86,6 +86,11 @@
- #define ARM_PSCI_1_0_FN64_STAT_RESIDENCY	ARM_PSCI_0_2_FN64(16)
+@@ -87,6 +87,7 @@
  #define ARM_PSCI_1_0_FN64_STAT_COUNT		ARM_PSCI_0_2_FN64(17)
  
-+/* PSCI 1.1 interface */
+ /* PSCI 1.1 interface */
 +#define ARM_PSCI_1_1_FN_SYSTEM_RESET2		ARM_PSCI_0_2_FN(18)
-+
-+#define ARM_PSCI_1_1_FN64_SYSTEM_RESET2		ARM_PSCI_0_2_FN64(18)
-+
+ #define ARM_PSCI_1_1_FN64_SYSTEM_RESET2		ARM_PSCI_0_2_FN64(18)
+ 
  /* 1KB stack per core */
- #define ARM_PSCI_STACK_SHIFT	10
- #define ARM_PSCI_STACK_SIZE	(1 << ARM_PSCI_STACK_SHIFT)
 diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
 index 87d1c77e8b..bcbb999b49 100644
 --- a/arch/arm/include/asm/system.h
@@ -921,10 +827,11 @@ index 903b335704..ea9d1c8355 100644
 -- 
 2.34.1
 
-From c8bf2bfc115f5e72c2983595368853eb660b950f Mon Sep 17 00:00:00 2001
+
+From d40b63cac6dcffa2f3b199cca3775138edccbbeb Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Sat, 9 Oct 2021 23:01:05 -0500
-Subject: [PATCH 10/11] sunxi: psci: Delegate PSCI to SCPI
+Subject: [PATCH 8/9] sunxi: psci: Delegate PSCI to SCPI
 
 This adds a new PSCI implementation which communicates with SCP firmware
 running on the AR100 using the SCPI protocol. This allows it to support
@@ -940,7 +847,7 @@ Signed-off-by: Samuel Holland <samuel@sholland.org>
  create mode 100644 arch/arm/cpu/armv7/sunxi/psci-scpi.c
 
 diff --git a/arch/arm/cpu/armv7/Kconfig b/arch/arm/cpu/armv7/Kconfig
-index c2d0491a37..64d822a9ae 100644
+index 7d58d1837b..cbcae209dc 100644
 --- a/arch/arm/cpu/armv7/Kconfig
 +++ b/arch/arm/cpu/armv7/Kconfig
 @@ -75,6 +75,7 @@ config ARMV7_PSCI
@@ -1428,10 +1335,11 @@ index 0000000000..cf85292a8f
 -- 
 2.34.1
 
-From be6dbfb89d0b4430f4e565597849baf0c9907550 Mon Sep 17 00:00:00 2001
+
+From adc8ea72a2d4c0600339a7afed8b1f98f3c07844 Mon Sep 17 00:00:00 2001
 From: Samuel Holland <samuel@sholland.org>
 Date: Wed, 8 Jun 2022 07:55:54 -0500
-Subject: [PATCH 11/11] sunxi: Enable SCP/SCPI on A33 as well
+Subject: [PATCH 9/9] sunxi: Enable SCP/SCPI on A33 as well
 
 Signed-off-by: Samuel Holland <samuel@sholland.org>
 ---
@@ -1443,7 +1351,7 @@ Signed-off-by: Samuel Holland <samuel@sholland.org>
  5 files changed, 22 insertions(+), 4 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/Kconfig b/arch/arm/cpu/armv7/Kconfig
-index 64d822a9ae..ff745a8e73 100644
+index cbcae209dc..6a515ed6d5 100644
 --- a/arch/arm/cpu/armv7/Kconfig
 +++ b/arch/arm/cpu/armv7/Kconfig
 @@ -75,7 +75,7 @@ config ARMV7_PSCI
@@ -1485,10 +1393,10 @@ index cf85292a8f..717c37c124 100644
  
  #define SCPI_RX_CHANNEL		1
 diff --git a/arch/arm/dts/sun8i-a23-a33.dtsi b/arch/arm/dts/sun8i-a23-a33.dtsi
-index a42fac676b..489bbc0254 100644
+index 84c6d9379a..826bcddcdf 100644
 --- a/arch/arm/dts/sun8i-a23-a33.dtsi
 +++ b/arch/arm/dts/sun8i-a23-a33.dtsi
-@@ -137,6 +137,14 @@
+@@ -138,6 +138,14 @@
  			#size-cells = <1>;
  			ranges;
  
@@ -1503,7 +1411,7 @@ index a42fac676b..489bbc0254 100644
  			sram_c: sram@1d00000 {
  				compatible = "mmio-sram";
  				reg = <0x01d00000 0x80000>;
-@@ -846,5 +854,11 @@
+@@ -847,5 +855,11 @@
  			#address-cells = <1>;
  			#size-cells = <0>;
  		};
@@ -1516,7 +1424,7 @@ index a42fac676b..489bbc0254 100644
  	};
  };
 diff --git a/arch/arm/dts/sunxi-u-boot.dtsi b/arch/arm/dts/sunxi-u-boot.dtsi
-index ee4c374b09..774cb1ff91 100644
+index 36b55c8b80..a152b1f787 100644
 --- a/arch/arm/dts/sunxi-u-boot.dtsi
 +++ b/arch/arm/dts/sunxi-u-boot.dtsi
 @@ -6,11 +6,11 @@

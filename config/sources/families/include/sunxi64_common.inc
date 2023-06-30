@@ -9,23 +9,16 @@
 enable_extension "sunxi-tools"
 declare -g ARCH=arm64
 declare -g ATF_TARGET_MAP="PLAT=$ATF_PLAT DEBUG=1 bl31;;build/$ATF_PLAT/debug/bl31.bin"
+declare -g ATFBRANCH="tag:v2.9.0"
 declare -g BOOTDELAY=1
 declare -g BOOTPATCHDIR="${BOOTPATCHDIR:-"u-boot-sunxi"}"
-declare -g BOOTBRANCH="${BOOTBRANCH:-"tag:v2022.10"}"
+declare -g BOOTBRANCH="${BOOTBRANCH:-"tag:v2023.07-rc4"}"
 declare -g BOOTENV_FILE='sunxi.txt'
-UBOOT_TARGET_MAP="${UBOOT_TARGET_MAP:-;;u-boot-sunxi-with-spl.bin}"
+UBOOT_TARGET_MAP="${UBOOT_TARGET_MAP:-BINMAN_ALLOW_MISSING=1;;u-boot-sunxi-with-spl.bin}"
 declare -g BOOTSCRIPT='boot-sun50i-next.cmd:boot.cmd'
 declare -g LINUXFAMILY=sunxi64
-declare -g CRUST_TARGET_MAP="scp;;build/scp/scp.bin"
 
-[[ -n "${CRUSTCONFIG}" && -z $CRUSTSOURCE ]] && CRUSTSOURCE='https://github.com/crust-firmware/crust'
-[[ -n "${CRUSTCONFIG}" && -z $CRUSTDIR ]] && CRUSTDIR='crust-sunxi-mainline'
-[[ -n "${CRUSTCONFIG}" && -z $CRUSTBRANCH ]] && CRUSTBRANCH='commit:c308a504853e7fdb47169796c9a832796410ece8'
-[[ -n "${CRUSTCONFIG}" && -z $CRUST_USE_GCC ]] && CRUST_USE_GCC='> 9.1.0'
-[[ -n "${CRUSTCONFIG}" && -z $CRUST_COMPILER ]] && CRUST_COMPILER='or1k-elf-'
-
-# Apply crust patches if crust is enabled
-[[ -n "${CRUSTCONFIG}" ]] && BOOTPATCHDIR="${BOOTPATCHDIR} u-boot-sunxi-crust"
+source "${BASH_SOURCE%/*}/crust_firmware.inc"
 
 case $BRANCH in
 
@@ -40,8 +33,8 @@ case $BRANCH in
 		;;
 
 	edge)
-		declare -g KERNEL_MAJOR_MINOR="6.2" # Major and minor versions of this kernel.
-		declare -g KERNELBRANCH="tag:v6.2.16"
+		declare -g KERNEL_MAJOR_MINOR="6.3" # Major and minor versions of this kernel.
+		declare -g KERNELBRANCH="tag:v6.3.9"
 		;;
 esac
 
