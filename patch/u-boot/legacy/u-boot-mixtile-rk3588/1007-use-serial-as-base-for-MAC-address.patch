@@ -1,23 +1,47 @@
-From 3d009929b5a9ef15f598a216fe9a7453f39c5ca3 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Ricardo Pardini <ricardo@pardini.net>
-Date: Fri, 30 Jun 2023 14:53:49 +0200
-Subject: [PATCH 1001/1006] mach-rockchip/board.c: find serial# first, then
- ethaddr; add a lot of debugging
+Date: Fri, 30 Jun 2023 17:30:37 +0200
+Subject: use serial# as base for MAC address; find serial# first, then
+ ethaddr; add a lot of debugging; adapted for Mixtile
 
 ---
- arch/arm/mach-rockchip/board.c | 39 ++++++++++++++++++++++++++++++----
- 1 file changed, 35 insertions(+), 4 deletions(-)
+ arch/arm/mach-rockchip/board.c | 72 +++++++++-
+ 1 file changed, 67 insertions(+), 5 deletions(-)
 
 diff --git a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
-index 9ffb017dd8..8797ad3436 100644
+index 7daa87f1ac..b1a7bac524 100644
 --- a/arch/arm/mach-rockchip/board.c
 +++ b/arch/arm/mach-rockchip/board.c
-@@ -110,14 +110,23 @@ static int rockchip_set_ethaddr(void)
+@@ -109,15 +109,55 @@ static int rockchip_set_ethaddr(void)
+ 	char buf[ARP_HLEN_ASCII + 1], mac[16];
  	u8 ethaddr[ARP_HLEN * MAX_ETHERNET] = {0};
  	int i, ret = -EINVAL;
- 
++	u8 serial_checksum[ARP_HLEN] = {0};
++
 +	printf("%s: starting ethernet MAC set\n", __func__);
 +
++	char *serial;
++	serial = env_get("serial#");
++	if (serial) {
++		printf("%s: serial# for eth base is %s\n", __func__, serial);
++		// checksum the serial# and obtain 6 bytes from it (ARP_HLEN)
++		// Initialize checksum bytes to zero
++		for (int i = 0; i < 6; i++) {
++			serial_checksum[i] = 0;
++		}
++		// Iterate over each character in the serial array
++		for (int i = 0; serial[i] != '\0'; i++) {
++			printf("%s: checksumming serial digit %d\n", __func__, i);
++			int index = i % 6;  // Calculate the appropriate index in the checksum array
++			serial_checksum[index] ^= serial[i];  // Perform XOR operation
++		}
++		serial_checksum[0] &= 0xfe;	/* clear multicast bit */
++		serial_checksum[0] |= 0x02;	/* set local assignment bit (IEEE802) */
++	} else {
++		printf("%s: serial# for eth base not available\n", __func__);
++	}
++
+ 
  #ifdef CONFIG_ROCKCHIP_VENDOR_PARTITION
 +	printf("%s: going for vendor_storage_read\n", __func__);
  	ret = vendor_storage_read(LAN_MAC_ID, ethaddr, sizeof(ethaddr));
@@ -28,15 +52,24 @@ index 9ffb017dd8..8797ad3436 100644
 +		printf("%s: looping... %d and ret %d\n", __func__, i, ret);
  		if (ret <= 0 || !is_valid_ethaddr(&ethaddr[i * ARP_HLEN])) {
  			if (!randomed) {
- 				net_random_ethaddr(&ethaddr[i * ARP_HLEN]);
+-				net_random_ethaddr(&ethaddr[i * ARP_HLEN]);
++				if (serial) {
++					// copy the checksum bytes into the ethaddr array
++					printf("%s: using SERIAL as base for MAC\n", __func__);
++					memcpy(&ethaddr[i * ARP_HLEN], serial_checksum, ARP_HLEN);
++					printf("%s: used SERIAL as base for MAC\n", __func__);
++				} else {
++					printf("%s: generating RANDOM MAC\n", __func__);
++					net_random_ethaddr(&ethaddr[i * ARP_HLEN]);
++				}
  				randomed = true;
 +				printf
-+				    ("%s: looping... generated RANDOMED... %d and ret %d\n",
++				    ("%s: looping... generated SERIAL or RANDOMED... %d and ret %d\n",
 +				     __func__, i, ret);
  			} else {
  				if (i > 0) {
  					memcpy(&ethaddr[i * ARP_HLEN],
-@@ -128,6 +137,7 @@ static int rockchip_set_ethaddr(void)
+@@ -128,6 +168,7 @@ static int rockchip_set_ethaddr(void)
  				}
  			}
  
@@ -44,7 +77,7 @@ index 9ffb017dd8..8797ad3436 100644
  			need_write = true;
  		}
  
-@@ -137,14 +147,18 @@ static int rockchip_set_ethaddr(void)
+@@ -137,14 +178,18 @@ static int rockchip_set_ethaddr(void)
  				memcpy(mac, "ethaddr", sizeof("ethaddr"));
  			else
  				sprintf(mac, "eth%daddr", i);
@@ -63,7 +96,7 @@ index 9ffb017dd8..8797ad3436 100644
  		if (ret < 0)
  			printf("%s: vendor_storage_write failed %d\n",
  			       __func__, ret);
-@@ -162,6 +176,7 @@ static int rockchip_set_serialno(void)
+@@ -162,6 +207,7 @@ static int rockchip_set_serialno(void)
  	char serialno_str[VENDOR_SN_MAX];
  	int ret = 0, i;
  	u64 serialno;
@@ -71,7 +104,7 @@ index 9ffb017dd8..8797ad3436 100644
  
  	/* Read serial number from vendor storage part */
  	memset(serialno_str, 0, VENDOR_SN_MAX);
-@@ -171,6 +186,7 @@ static int rockchip_set_serialno(void)
+@@ -171,6 +217,7 @@ static int rockchip_set_serialno(void)
  
  	ret = vendor_storage_read(SN_ID, serialno_str, (VENDOR_SN_MAX-1));
  	if (ret > 0) {
@@ -79,7 +112,7 @@ index 9ffb017dd8..8797ad3436 100644
  		j = strlen(serialno_str);
  		for (i = 0; i < j; i++) {
  			if ((serialno_str[i] >= 'a' && serialno_str[i] <= 'z') ||
-@@ -185,11 +201,16 @@ static int rockchip_set_serialno(void)
+@@ -185,11 +232,16 @@ static int rockchip_set_serialno(void)
  		if (i > 0) {
  			serialno_str[i + 1] = 0x0;
  			env_set("serial#", serialno_str);
@@ -96,7 +129,7 @@ index 9ffb017dd8..8797ad3436 100644
  		struct udevice *dev;
  
  		/* retrieve the device */
-@@ -203,10 +224,13 @@ static int rockchip_set_serialno(void)
+@@ -203,10 +255,13 @@ static int rockchip_set_serialno(void)
  							  &dev);
  
  		if (ret) {
@@ -111,7 +144,7 @@ index 9ffb017dd8..8797ad3436 100644
  		/* read the cpu_id range from the efuses */
  		ret = misc_read(dev, CPUID_OFF, &cpuid, sizeof(cpuid));
  		if (ret) {
-@@ -214,12 +238,18 @@ static int rockchip_set_serialno(void)
+@@ -214,12 +269,18 @@ static int rockchip_set_serialno(void)
  			       __func__, ret);
  			return ret;
  		}
@@ -130,7 +163,7 @@ index 9ffb017dd8..8797ad3436 100644
  		for (i = 0; i < 8; i++) {
  			low[i] = cpuid[1 + (i << 1)];
  			high[i] = cpuid[i << 1];
-@@ -230,6 +260,7 @@ static int rockchip_set_serialno(void)
+@@ -230,6 +291,7 @@ static int rockchip_set_serialno(void)
  		snprintf(serialno_str, sizeof(serialno_str), "%llx", serialno);
  
  		env_set("serial#", serialno_str);
@@ -138,10 +171,10 @@ index 9ffb017dd8..8797ad3436 100644
  	}
  
  	return ret;
-@@ -447,11 +478,11 @@ static void scan_run_cmd(void)
+@@ -463,11 +525,11 @@ int board_late_init(void)
+ 		power_delivery_func();
+ 	}
  
- int board_late_init(void)
- {
 -#ifdef CONFIG_ROCKCHIP_SET_ETHADDR
 -	rockchip_set_ethaddr();
 -#endif
@@ -154,5 +187,5 @@ index 9ffb017dd8..8797ad3436 100644
  	setup_download_mode();
  	scan_run_cmd();
 -- 
-2.40.1
+Armbian
 
