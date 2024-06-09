@@ -29,8 +29,6 @@ fonts-dejavu-core
 fonts-freefont-ttf
 fonts-guru
 fonts-guru-extra
-fonts-kacst
-fonts-kacst-one
 fonts-liberation
 fonts-nanum
 fonts-opensymbol
@@ -67,7 +65,6 @@ libgsettings-qt1
 libnotify-bin
 libproxy1-plugin-gsettings
 libproxy1-plugin-networkmanager
-libu2f-udev
 libwmf0.2-7-gtk
 libxapp1
 libxcursor1

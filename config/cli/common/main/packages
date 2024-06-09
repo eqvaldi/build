@@ -4,7 +4,6 @@ bridge-utils
 chrony
 command-not-found
 console-setup
-cpufrequtils
 cron
 curl
 dbus-user-session
@@ -49,4 +48,5 @@ usbutils
 vlan
 wget
 wireless-tools
+wireguard-tools
 wpasupplicant
