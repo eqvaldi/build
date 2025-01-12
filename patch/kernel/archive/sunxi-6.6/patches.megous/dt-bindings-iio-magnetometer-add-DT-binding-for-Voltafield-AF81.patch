@@ -1,4 +1,4 @@
-From d42a012154543761ac328927ee4479af557ff731 Mon Sep 17 00:00:00 2001
+From 351a0374827d58b300a5c1010a63290525995ac3 Mon Sep 17 00:00:00 2001
 From: Icenowy Zheng <icenowy@aosc.io>
 Date: Thu, 18 Mar 2021 20:16:52 +0800
 Subject: dt-bindings: iio: magnetometer: add DT binding for Voltafield AF8133J

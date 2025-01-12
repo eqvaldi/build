@@ -1,4 +1,4 @@
-From 1d931f8c9f87d7503510bddf09fc2e112ee6ac87 Mon Sep 17 00:00:00 2001
+From 28f4999027428a6dc11cfc268d5b3b7616beb910 Mon Sep 17 00:00:00 2001
 From: The-going <48602507+The-going@users.noreply.github.com>
 Date: Mon, 24 Jan 2022 15:23:33 +0300
 Subject: arm:dts: Add sun8i-h2-plus-sunvell-r69 device

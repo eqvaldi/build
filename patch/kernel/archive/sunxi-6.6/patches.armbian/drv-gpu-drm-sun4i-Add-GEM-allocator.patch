@@ -1,4 +1,4 @@
-From d67590fdea164deffb54df238928e2eb1e3e390a Mon Sep 17 00:00:00 2001
+From 6931f026c83a6593302cd741c796b77e2f39a384 Mon Sep 17 00:00:00 2001
 From: Maxime Ripard <maxime.ripard@free-electrons.com>
 Date: Mon, 7 Dec 2015 09:47:34 +0100
 Subject: drv:gpu:drm:sun4i: Add GEM allocator

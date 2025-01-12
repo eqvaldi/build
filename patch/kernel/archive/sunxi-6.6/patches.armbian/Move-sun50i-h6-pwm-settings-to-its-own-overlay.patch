@@ -1,4 +1,4 @@
-From 7daf13449df04fd21561c3244163204bc767d9d7 Mon Sep 17 00:00:00 2001
+From f90b31945c1d2c2aebce32826da47dd1e2a9e213 Mon Sep 17 00:00:00 2001
 From: afaulkner420 <afaulkner420@gmail.com>
 Date: Fri, 25 Mar 2022 19:23:56 +0000
 Subject: Move sun50i-h6-pwm settings to its own overlay

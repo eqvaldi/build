@@ -13,10 +13,10 @@ Signed-off-by: Icenowy Zheng <icenowy@aosc.io>
  1 file changed, 2 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-index 573578db9509..326d2a47162e 100644
+index 111111111111..222222222222 100644
 --- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
 +++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-@@ -1484,6 +1484,8 @@ patternProperties:
+@@ -1486,6 +1486,8 @@ patternProperties:
      description: VoCore Studio
    "^voipac,.*":
      description: Voipac Technologies s.r.o.

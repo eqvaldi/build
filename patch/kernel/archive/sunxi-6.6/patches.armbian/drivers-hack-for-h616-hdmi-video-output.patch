@@ -1,4 +1,4 @@
-From 35fe095a767a286b6f33757e8606d1d79cd8d2cc Mon Sep 17 00:00:00 2001
+From 014d2038f217d3fcf5ddd8a919fc4315bbc2d97f Mon Sep 17 00:00:00 2001
 From: orangepi-xunlong <258384131@qq.com>
 Date: Mon, 5 Jun 2023 14:16:04 +0800
 Subject: drivers: hack for h616 hdmi video output
