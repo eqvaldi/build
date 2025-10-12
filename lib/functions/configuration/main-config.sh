@@ -206,7 +206,7 @@ function do_main_configuration() {
 
 	case $MAINLINE_MIRROR in
 		google)
-			declare -g -r MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable'
+			declare -g -r MAINLINE_KERNEL_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux-stable.git'
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware.git'
 			;;
 		tuna)
@@ -217,6 +217,10 @@ function do_main_configuration() {
 			declare -g -r MAINLINE_KERNEL_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-stable.git'
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://mirrors.bfsu.edu.cn/git/linux-firmware.git'
 			;;
+		gitverse)
+			declare -g -r MAINLINE_KERNEL_SOURCE='https://gitverse.ru/pbs-sunflower/linux-stable.git'
+			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://gitverse.ru/pbs-sunflower/linux-firmware.git'
+			;;
 		*)
 			declare -g -r MAINLINE_KERNEL_SOURCE='https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git' # "linux-stable" was renamed to "linux"
 			declare -g -r MAINLINE_FIRMWARE_SOURCE='https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git'
@@ -224,18 +228,6 @@ function do_main_configuration() {
 	esac
 
 	[[ $USE_GITHUB_UBOOT_MIRROR == yes ]] && UBOOT_MIRROR=github # legacy compatibility?
-
-	case $UBOOT_MIRROR in
-		gitee)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://gitee.com/mirrors/u-boot.git'
-			;;
-		denx)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://source.denx.de/u-boot/u-boot.git'
-			;;
-		*)
-			declare -g -r MAINLINE_UBOOT_SOURCE='https://github.com/u-boot/u-boot'
-			;;
-	esac
 
 	case $GITHUB_MIRROR in
 		fastgit)
@@ -250,6 +242,18 @@ function do_main_configuration() {
 			;;
 		*)
 			declare -g -r GITHUB_SOURCE='https://github.com'
+			;;
+	esac
+
+	case $UBOOT_MIRROR in
+		gitee)
+			declare -g -r MAINLINE_UBOOT_SOURCE='https://gitee.com/mirrors/u-boot.git'
+			;;
+		denx)
+			declare -g -r MAINLINE_UBOOT_SOURCE='https://source.denx.de/u-boot/u-boot.git'
+			;;
+		*)
+			declare -g -r MAINLINE_UBOOT_SOURCE="${GITHUB_SOURCE}/u-boot/u-boot"
 			;;
 	esac
 
