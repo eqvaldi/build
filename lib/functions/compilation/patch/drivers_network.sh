@@ -233,7 +233,7 @@ driver_xradio_xr819() {
 
 	# Wireless drivers for Xradio XR819 chipsets
 
-	if linux-version compare "${version}" ge 4.19 && [[ "$LINUXFAMILY" == sunxi* ]]; then
+	if linux-version compare "${version}" ge 4.19 && [[ "$LINUXFAMILY" == sun* ]]; then
 
 		# Attach to specific commit (is branch:master)
 		local xradio_xr819_ver="commit:684a91a3692a964c5886dcf4369874cc7c19c0a4" # Commit date: Aug 7, 2025 (please update when updating commit ref)
@@ -372,13 +372,11 @@ driver_rtw88() {
 }
 
 driver_rtl8852bs() {
-
 	# Wireless driver for Realtek 8852BS SDIO Wireless driver used in BananaPi F3 and Armsom Sige5
-
 	if linux-version compare "${version}" ge 6.1 && [[ "${LINUXFAMILY}" == spacemit || "${LINUXFAMILY}" == rk35xx || "${LINUXFAMILY}" == rockchip64 ]]; then
 
 		# Attach to specific commit
-		local rtl8852bs_ver='commit:15811ffdf575baabbd1cd46a306e9544a7f02846' # Commit date: Oct 2, 2025 (please update when updating commit ref)
+		local rtl8852bs_ver='commit:72c75150d7422eda3f0b3f543cce65114efcb4fe' # Commit date: Oct 18, 2025 (please update when updating commit ref)
 
 		display_alert "Adding" "Wireless drivers for Realtek 8852BS SDIO chipset ${rtl8852bs_ver}" "info"
 
@@ -442,7 +440,7 @@ driver_rtl88x2cs() {
 	if linux-version compare "${version}" ge 5.9 && [[ "$LINUXFAMILY" == meson64 ]]; then
 
 		# Attach to specific commit (track branch:tune_for_jethub)
-		local rtl88x2csver='commit:79884dd23267e6e9ec29546476d8f68a1442d180' # Commit date: Oct 09, 2025 (please update when updating commit ref)
+		local rtl88x2csver='commit:39f72eab042da8d74a2c9753cb5865caf103d93c' # Commit date: Oct 13, 2025 (please update when updating commit ref)
 
 		display_alert "Adding" "Wireless drivers for Realtek 88x2cs chipsets ${rtl88x2csver}" "info"
 
@@ -484,7 +482,7 @@ driver_uwe5622() {
 
 	# Wireless drivers for Unisoc uwe5622 wireless
 
-	if linux-version compare "${version}" ge 5.15 && [[ "$LINUXFAMILY" == sunxi* || "$LINUXFAMILY" == rockchip64 || "$LINUXFAMILY" == rk35xx ]]; then
+	if linux-version compare "${version}" ge 5.15 && [[ "$LINUXFAMILY" == sun* || "$LINUXFAMILY" == rockchip64 || "$LINUXFAMILY" == rk35xx ]]; then
 
 		display_alert "Adding" "Drivers for Unisoc uwe5622 found on some Allwinner and Rockchip boards" "info"
 
@@ -524,7 +522,7 @@ driver_uwe5622() {
 			process_patch_file "${SRC}/patch/misc/wireless-uwe5622/uwe5622-v6.6-fix-tty-sdio.patch" "applying"
 		fi
 
-		if [[ "$LINUXFAMILY" == sunxi* ]]; then
+		if [[ "$LINUXFAMILY" == sun* ]]; then
 			process_patch_file "${SRC}/patch/misc/wireless-uwe5622/uwe5622-fix-setting-mac-address-for-netdev.patch" "applying"
 		fi
 
@@ -554,7 +552,7 @@ driver_uwe5622() {
 		fi
 
 		if linux-version compare "${version}" ge 6.15; then
-			if [[ "$LINUXFAMILY" == sunxi* ]]; then
+			if [[ "$LINUXFAMILY" == sun* ]]; then
 				process_patch_file "${SRC}/patch/misc/wireless-uwe5622/uwe5622-fix-timer-api-changes-for-6.15-only-sunxi.patch" "applying"
 			else
 				process_patch_file "${SRC}/patch/misc/wireless-uwe5622/uwe5622-v6.15-timer-api-changes.patch" "applying"
@@ -575,7 +573,7 @@ driver_uwe5622() {
 driver_rtl8723cs() {
 
 	# Wireless drivers for Realtek rtl8723cs chipsets
-	# Driver has been borrowed from sunxi 6.1 megous patch archive.
+	# Driver has been borrowed from sun* 6.1 megous patch archive.
 	# Applies only from linux 6.1 onwards, so older kernel archives does not require to be altered
 
 	# It was disabled from d1/bcm2711 as that kernel is not fully in sync with mainline and as its probably not needed there anyway
@@ -670,7 +668,7 @@ driver_rtl8723DS() {
 	if linux-version compare "${version}" ge 5.0; then
 
 		# Attach to specific commit (was "branch:master")
-		local rtl8723dsver='commit:39d0eedf4eaedfcf6e133413a389c5f8a70a7d1f' # Commit date: 2025-10-02 (please update when updating commit ref)
+		local rtl8723dsver='commit:8e1aa4d865e6f8709fd07cceb20b5c6eb993875b' # Commit date: 2025-10-18 (please update when updating commit ref)
 
 		display_alert "Adding" "Wireless drivers for Realtek 8723DS chipsets ${rtl8723dsver}" "info"
 
