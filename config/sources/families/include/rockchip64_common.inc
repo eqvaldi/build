@@ -27,13 +27,13 @@ RKBIN_DIR="$SRC/cache/sources/rkbin-tools"
 case $BRANCH in
 
 	current)
-		declare -g KERNEL_MAJOR_MINOR="6.12"
+		declare -g KERNEL_MAJOR_MINOR="6.18"
 		declare -g LINUXFAMILY=rockchip64
 		declare -g LINUXCONFIG='linux-rockchip64-'$BRANCH
 		;;
 
 	edge)
-		declare -g KERNEL_MAJOR_MINOR="6.18"
+		declare -g KERNEL_MAJOR_MINOR="6.19"
 		declare -g LINUXFAMILY=rockchip64
 		declare -g LINUXCONFIG='linux-rockchip64-'$BRANCH
 		;;
@@ -118,6 +118,7 @@ case "$BOOT_SOC" in
 		BOOT_SCENARIO="${BOOT_SCENARIO:=spl-blobs}"
 		DDR_BLOB="${DDR_BLOB:-"rk35/rk3528_ddr_1056MHz_v1.09.bin"}"
 		BL31_BLOB="${BL31_BLOB:-"rk35/rk3528_bl31_v1.17.elf"}"
+		ROCKUSB_BLOB="rk35/rk3528_spl_loader_v1.07.104.bin"
 		;;
 
 	rk3566)
