@@ -29,12 +29,15 @@ case "${BRANCH}" in
 		declare -g DISTRO_GENERIC_KERNEL=yes
 		;;
 	cloud)
-		declare -g GRUB_CMDLINE_LINUX_DEFAULT="selinux=0 loglevel=3 max_loop=32"
+		declare -g GRUB_CMDLINE_LINUX_DEFAULT="selinux=0 max_loop=32"
 		declare -g KERNEL_MAJOR_MINOR="6.18"
 		declare -g LINUXCONFIG="linux-uefi-${LINUXFAMILY}-cloud"
 		declare -g INSTALL_ARMBIAN_FIRMWARE="no"
 		declare -g EXTRAWIFI="no"
 		declare -g UEFI_GRUB_TIMEOUT=0
+		# Text GRUB: the graphical one sets the QEMU standard VGA through video_bochs.
+		# The cloud kernel has only the EFI framebuffer: its console is then unreadable.
+		declare -g UEFI_GRUB_TERMINAL="console"
 		declare -g QCOW2_RESIZE_AMOUNT="16G"
 		# add additional packages to the image
 		display_alert "Add additional packages to the image" "qemu-guest-agent spice-vdagent" "debug"
@@ -92,6 +95,9 @@ if [[ "${QEMU_UBOOT_BOOTCONFIG}" != "" ]]; then
 	}
 
 fi
+
+# shellcheck source=config/sources/families/include/uefi_initramfs.inc
+source "${BASH_SOURCE%/*}/uefi_initramfs.inc"
 
 function pre_customize_image__disable_few_armbian_services() {
 	display_alert "Disabling Armbian services that are not needed for UEFI" "${BOARD}" "info"

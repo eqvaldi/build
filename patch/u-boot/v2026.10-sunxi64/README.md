@@ -18,3 +18,16 @@ is upstreamed; the legacy dir is kept for reference.
 Boards that already self-pin a newer `BOOTBRANCH_BOARD`/`BOOTPATCHDIR` (e.g.
 `v2025-sunxi`, `v2025.04`, `v2026.01`) are unaffected by the family default and keep
 their pins.
+
+## Orange Pi Zero2: SPI NOR
+
+`u-boot-sunxi-with-spl.bin` is also the SPI NOR image (offset 0). Take the 2 MiB
+NOR's `mtdN` from `cat /proc/mtd`, then, with the installed board package
+`linux-u-boot-orangepizero2-<branch>`:
+`flashcp -v /usr/lib/linux-u-boot-<branch>-orangepizero2/u-boot-sunxi-with-spl.bin /dev/mtdN`.
+`flash_erase /dev/mtdN 0 0` blanks it again, including the saved environment.
+
+The U-Boot environment lives in the same NOR at 0xf0000 (64 KiB) for SD and SPI
+boots. flashcp of the image above only erases the blocks the image covers, so a
+saved environment survives it; `env default -a; saveenv` in U-Boot resets it.
+`fw_printenv`/`fw_setenv` use `/etc/fw_env.config` from the board's BSP package.

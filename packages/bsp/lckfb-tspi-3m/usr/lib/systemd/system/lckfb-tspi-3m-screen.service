@@ -1,0 +1,19 @@
+[Unit]
+Description=Detect the LCKFB TaishanPi 3M MIPI screen and enable its overlay
+DefaultDependencies=no
+After=local-fs.target systemd-modules-load.service
+Before=display-manager.service getty@tty1.service armbian-firstlogin.service
+ConditionPathExists=/boot/armbianEnv.txt
+# Only U-Boot applies the overlays in armbianEnv.txt. Under UEFI firmware
+# the device tree comes from the firmware and nothing reads that file.
+ConditionPathExists=!/sys/firmware/efi
+
+[Service]
+Type=oneshot
+# Without this the unit goes back to inactive and is started again by
+# every later job that pulls in sysinit.target: three runs per boot.
+RemainAfterExit=yes
+ExecStart=/usr/libexec/lckfb-tspi-3m-screen
+
+[Install]
+WantedBy=sysinit.target

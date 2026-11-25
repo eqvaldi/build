@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# @description Standard GRUB bootloader setup for UEFI-capable boards (amd64, arm64, loong64), with optional amd64 BIOS support and a `DISTRO_GENERIC_KERNEL` mode that boots the distro kernel instead of Armbian's. Installs `grub-efi`, generates `grub.cfg`, and sets `GRUB_GFXPAYLOAD_LINUX=text` with `splash plymouth.ignore-serial-consoles` to keep the framebuffer console on `fbcon` and kernel boot messages visible.
+# @description Standard GRUB bootloader setup for UEFI-capable boards (amd64, arm64, loong64), with optional amd64 BIOS support and a `DISTRO_GENERIC_KERNEL` mode that boots the distro kernel instead of Armbian's. Installs `grub-efi`, generates `grub.cfg`, and sets `GRUB_GFXPAYLOAD_LINUX=text` with `splash plymouth.ignore-serial-consoles loglevel=3` to keep the framebuffer console on `fbcon` with critical kernel messages only.
 
 # This runs *after* user_config. Don't change anything not coming from other variables or meant to be configured by the u ser.
 function extension_prepare_config__prepare_grub_standard() {
@@ -324,18 +324,22 @@ configure_grub() {
 	#      verbose/text theme", so a desktop installed later still
 	#      booted to a black/text screen.
 	#
-	# CLI images: NO 'quiet' and NO 'loglevel=3'. Plymouth still
-	# draws the splash on top of the kernel boot messages, but the
-	# messages remain visible underneath so users can see what their
-	# system is doing. Press Esc during boot to drop the splash and
-	# read the messages directly.
+	# All images: 'loglevel=3'. The console shows critical kernel messages only, during
+	# boot and after it. Kernel info and warning messages must not mix into the
+	# login prompt or the first-run setup. 'dmesg' and the journal keep them.
+	# CLI images: NO 'quiet'. The systemd boot status stays visible.
 	# Desktop images with Plymouth: a clean splash from GRUB to the
 	# desktop. No messages and no cursor; Esc still shows the boot log.
 	# Without Plymouth (PLYMOUTH=no) the messages stay: else the screen is blank.
 	GRUB_CMDLINE_LINUX_DEFAULT+=" splash plymouth.ignore-serial-consoles"
 	if [[ "${BUILD_DESKTOP}" == "yes" && "${PLYMOUTH}" == "yes" ]]; then
-		GRUB_CMDLINE_LINUX_DEFAULT+=" quiet loglevel=3 vt.global_cursor_default=0"
+		GRUB_CMDLINE_LINUX_DEFAULT+=" quiet vt.global_cursor_default=0"
 	fi
+	# After 'quiet': the kernel applies both in order, and 'quiet' sets
+	# CONFIG_CONSOLE_LOGLEVEL_QUIET. The console prints levels below 3:
+	# critical (2) and worse. Errors (3), often harmless firmware noise
+	# such as ACPI BIOS errors, go to 'dmesg' and the journal only.
+	GRUB_CMDLINE_LINUX_DEFAULT+=" loglevel=3"
 	if [[ "${ARCH}" == "amd64" ]]; then
 		GRUB_CMDLINE_LINUX_DEFAULT+=" i915.force_probe=*"
 	fi
@@ -372,6 +376,38 @@ configure_grub() {
 		GRUB_DISABLE_LINUX_UUID=false          # Be explicit about wanting UUID
 	grubCfgFrag
 
+	# Silent boot: 10_linux prints "Loading Linux ..." and "Loading initial ramdisk ..."
+	# before each linux/initrd line. Debian always does; Ubuntu does with GRUB_DISABLE_SUBMENU=y.
+	# This last grub.d script turns them into comments in grub.cfg.new when the cmdline has "quiet".
+	# update-grub runs it on every kernel and GRUB upgrade.
+	cat <<- 'grubQuietLoading' > "${MOUNT}"/etc/grub.d/99_armbian-quiet-loading
+		#!/bin/sh
+		# Armbian: with "quiet" on the kernel cmdline, hide the GRUB loading messages.
+		set -e
+		case " ${GRUB_CMDLINE_LINUX_DEFAULT} ${GRUB_CMDLINE_LINUX} " in
+			*" quiet "*) ;;
+			*) exit 0 ;;
+		esac
+		# grub-mkconfig -o writes the output of each script to <cfg>.new.
+		cfg="$(readlink /proc/$$/fd/1 || true)"
+		case "$cfg" in
+			*.new) [ -f "$cfg" ] || exit 0 ;;
+			*) exit 0 ;; # output to a terminal or a pipe
+		esac
+		# grub.cfg can hold password hashes: keep the copy private.
+		umask 077
+		tmp="$(mktemp "$cfg.quiet.XXXXXX")" || exit 0
+		trap 'rm -f "$tmp"' EXIT
+		# grub-mkconfig writes more to <cfg>.new after this script, at its own offset.
+		# Keep the length: change "echo" to "#   " before a linux, initrd or devicetree line.
+		awk 'NR > 1 { if (prev ~ /^[ \t]*echo[ \t]/ && $0 ~ /^[ \t]*(linux|initrd|devicetree)/) sub(/echo/, "#   ", prev); print prev }
+			{ prev = $0 }
+			END { if (NR) print prev }' "$cfg" > "$tmp"
+		[ "$(wc -c < "$tmp")" -eq "$(wc -c < "$cfg")" ] || exit 0
+		cat "$tmp" > "$cfg"
+	grubQuietLoading
+	chmod 0755 "${MOUNT}"/etc/grub.d/99_armbian-quiet-loading
+
 	if [[ "a${UEFI_GRUB_DISABLE_OS_PROBER}" != "a" ]]; then
 		cat <<- grubCfgFragHostSide >> "${MOUNT}"/etc/default/grub.d/98-armbian.cfg
 			GRUB_DISABLE_OS_PROBER=${UEFI_GRUB_DISABLE_OS_PROBER}
@@ -379,8 +415,15 @@ configure_grub() {
 	fi
 
 	if [[ "a${UEFI_GRUB_TERMINAL}" != "a" ]]; then
+		# GRUB_TERMINAL also sets the input terminal. gfxterm and vga_text are output only:
+		# as input, GRUB shows "terminal `gfxterm' isn't found" at each boot.
+		declare grub_terminal_input="" grub_terminal
+		for grub_terminal in ${UEFI_GRUB_TERMINAL}; do
+			[[ "${grub_terminal}" == "gfxterm" || "${grub_terminal}" == "vga_text" ]] || grub_terminal_input+="${grub_terminal_input:+ }${grub_terminal}"
+		done
 		cat <<- grubCfgFragTerminal >> "${MOUNT}"/etc/default/grub.d/98-armbian.cfg
-			GRUB_TERMINAL="${UEFI_GRUB_TERMINAL}"
+			GRUB_TERMINAL_OUTPUT="${UEFI_GRUB_TERMINAL}"
+			GRUB_TERMINAL_INPUT="${grub_terminal_input:-console}"
 		grubCfgFragTerminal
 	fi
 

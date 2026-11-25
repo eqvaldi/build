@@ -71,6 +71,9 @@ function do_main_configuration() {
 	# Fix old U-Boot pylibfdt failing against SWIG >= 4.3 (trixie). No-op on newer U-Boot. Can be removed when all U-Boot versions are >= v2026.07.
 	enable_extension "uboot-fix-pylibfdt-swig"
 
+	# fake-hwclock 0.14 sets the clock backwards on load (Debian #1093227). No-op on other versions. Can be removed when all releases ship a fixed fake-hwclock.
+	enable_extension "fake-hwclock-load-fix"
+
 	# Network stack to use, default to network-manager; configuration can override this.
 	# Will be made read-only further down.
 	declare -g NETWORKING_STACK="${NETWORKING_STACK}"
@@ -181,7 +184,7 @@ function do_main_configuration() {
 		if [[ -z $CRYPTROOT_PASSPHRASE ]] && [[ -z $CRYPTROOT_AUTOUNLOCK ]]; then # a passphrase is mandatory if rootfs encryption is enabled, unless CRYPTROOT_AUTOUNLOCK is wanted
 			exit_with_error "Root encryption is enabled but CRYPTROOT_PASSPHRASE or CRYPTROOT_AUTOUNLOCK is not set"
 		fi
-		[[ -z $CRYPTROOT_MAPPER ]] && CRYPTROOT_MAPPER="armbian-root" # TODO: fixed name can't be used for parallel image building (rpardini: ?)
+		[[ -z $CRYPTROOT_MAPPER ]] && CRYPTROOT_MAPPER="armbian-root" # Global to the host: parallel builds wait for it
 		[[ -z $CRYPTROOT_SSH_UNLOCK ]] && CRYPTROOT_SSH_UNLOCK=yes
 		[[ -z $CRYPTROOT_SSH_UNLOCK_PORT ]] && CRYPTROOT_SSH_UNLOCK_PORT=2022
 		# Default to pdkdf2, this used to be the default with cryptroot <= 2.0, however
@@ -330,6 +333,7 @@ function do_main_configuration() {
 	ATF_COMPILE=yes              # @TODO: move to armhf/arm64
 	[[ -z $EXTRAWIFI ]] && EXTRAWIFI="yes"
 	[[ -z $PLYMOUTH ]] && PLYMOUTH="yes"
+	[[ -z $BOOT_LOGO ]] && BOOT_LOGO="desktop" # Plymouth logo on desktop images; "yes" also on minimal, "no" never
 	[[ -z $AUFS ]] && AUFS="yes"
 	[[ -z $IMAGE_PARTITION_TABLE ]] && IMAGE_PARTITION_TABLE="msdos"
 	[[ -z $EXTRA_BSP_NAME ]] && EXTRA_BSP_NAME=""
@@ -436,7 +440,7 @@ function do_extra_configuration() {
 	[[ -z $BOOTPATCHDIR ]] && BOOTPATCHDIR="u-boot-$LINUXFAMILY" # @TODO move to hook
 	[[ -z $ATFPATCHDIR ]] && ATFPATCHDIR="atf-$LINUXFAMILY"
 
-	if [[ "$RELEASE" =~ ^(focal|jammy|noble|oracular|plucky|questing|resolute)$ ]]; then
+	if [[ "$RELEASE" =~ ^(noble|resolute)$ ]]; then
 		DISTRIBUTION="Ubuntu"
 	else
 		DISTRIBUTION="Debian"
@@ -522,7 +526,27 @@ function do_extra_configuration() {
 		APT_PROXY_ADDR="$(echo "${http_proxy:-${https_proxy:-${HTTP_PROXY:-${HTTPS_PROXY:-}}}}" | sed -E 's|https?://([^/]+).*|\1|')"
 		display_alert "Derived APT proxy address from proxy env vars" "${APT_PROXY_ADDR##*@}" "info"
 	fi
-	[[ -n "${APT_PROXY_ADDR}" ]] && display_alert "Using custom apt proxy address" "APT_PROXY_ADDR=${APT_PROXY_ADDR##*@}" "info"
+	# Unreachable proxy: download direct instead of failing every apt call.
+	# Not with MANAGE_ACNG=yes: that cache starts later, in prepare_host.
+	if [[ -n "${APT_PROXY_ADDR}" && "${MANAGE_ACNG}" != "yes" ]]; then
+		# apt gets http://${APT_PROXY_ADDR}: no port means 80. Probe the same port.
+		declare apt_proxy="${APT_PROXY_ADDR##*@}" apt_proxy_host="${APT_PROXY_ADDR##*@}" apt_proxy_port=80
+		if [[ "${apt_proxy}" =~ ^(.+):([0-9]+)$ ]]; then
+			apt_proxy_host="${BASH_REMATCH[1]}" apt_proxy_port="${BASH_REMATCH[2]}"
+		fi
+		apt_proxy_host="${apt_proxy_host#[}" apt_proxy_host="${apt_proxy_host%]}" # IPv6 [addr]
+		if timeout 2 bash -c "exec 3<>/dev/tcp/${apt_proxy_host}/${apt_proxy_port}" 2> /dev/null; then
+			display_alert "Using custom apt proxy address" "APT_PROXY_ADDR=${apt_proxy}" "info"
+		else
+			display_alert "Apt proxy unreachable, downloading direct" "${apt_proxy}" "wrn"
+			APT_PROXY_ADDR=""
+			# apt also reads these. Drop the ones that point to this proxy.
+			declare v
+			for v in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY; do
+				[[ "${!v:-}" =~ [/@]"${apt_proxy}"([:/]|$) ]] && unset "${v}"
+			done
+		fi
+	fi
 
 	# @TODO: allow to run aggregation, for CONFIG_DEFS_ONLY? rootfs_aggregate_packages
 
@@ -669,6 +693,7 @@ function check_filesystem_compatibility_on_host() {
 		if ! grep -q "\<$ROOTFS_TYPE\>" /proc/filesystems; then # ensure exact match with \<...\>
 			# Try modprobing the fs module since it doesn't show up in /proc/filesystems if it's an unloaded module versus built-in
 			if ! modprobe "$ROOTFS_TYPE"; then
+				display_alert "Load the module on the build host, then build again" "sudo modprobe $ROOTFS_TYPE" "wrn"
 				exit_with_error "Filesystem type unsupported by build host:" "$ROOTFS_TYPE"
 			else
 				display_alert "Sucessfully loaded kernel module for filesystem" "$ROOTFS_TYPE" ""

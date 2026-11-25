@@ -21,7 +21,7 @@ cd build
 
 <a href="#armbian-linux-build-framework"><img src=".github/README.gif" alt="Build demonstration" width="100%"></a>
 
-The entrypoint `compile.sh` sources `lib/single.sh` and dispatches into the framework in `lib/`. Build-time options can be passed on the command line, e.g.:
+The entrypoint `compile.sh` sources `lib/single.sh` and dispatches into the framework in `lib/`. Build-time options can be passed on the command line, for example:
 
 ```bash
 ./compile.sh BOARD=orangepi5 BRANCH=current RELEASE=trixie BUILD_MINIMAL=yes KERNEL_CONFIGURE=no
@@ -51,16 +51,16 @@ The entrypoint `compile.sh` sources `lib/single.sh` and dispatches into the fram
 | Path | Contents |
 |:--|:--|
 | `compile.sh` | Build entrypoint; sources `lib/single.sh` and invokes the CLI |
-| `lib/` | Core build framework (Bash functions, Python helpers under `lib/tools/`) |
-| `config/` | Board, family, distribution, kernel and CLI configuration |
+| `lib/` | Core build framework |
+| `config/` | Board, CLI and distribution configuration |
 | `config/boards/` | One file per board; the extension marks its support status (see below) |
 | `config/cli/` | CLI package selections per release |
-| `config/its/` | Image Tree Source files for device tree builder |
+| `config/distributions/` | Debian/Ubuntu distribution status and base definitions |
 | `patch/` | Kernel, U-Boot and ATF patch sets organized by family/version |
 | `packages/` | In-tree package sources, blobs and BSP material |
 | `extensions/` | Optional build extensions enabled via `ENABLE_EXTENSIONS=` |
 | `tools/` | Developer helpers (`mk_format_patch`, `unifying_configs`) |
-| `action.yml` | GitHub Action definition ("Rebuild Armbian") |
+| `action.yml` | GitHub composite action definition ("Rebuild Armbian") |
 
 ### Board config extensions
 
@@ -78,9 +78,9 @@ See [`config/boards/README.md`](config/boards/README.md) for the full list of pe
 
 ## Built With
 
-- **Bash** — build framework in `lib/`, entrypoint `compile.sh`, most of `extensions/`, and the shell portions of board/family configs
-- **Python** — developer and build helpers under `lib/tools/`
-- **Make / Kbuild** — kernel and U-Boot build systems invoked by the framework; overlay `Makefile`s under `patch/kernel/archive/*/overlay/`
+- **Bash** — build framework in `lib/`, entrypoint `compile.sh`, board/family config files and most of `extensions/`
+- **Python** — developer and build helpers invoked by the framework (e.g. `mkbootarea.py` under `packages/blobs/`)
+- **Make / Kbuild** — kernel and U-Boot build systems invoked by the framework; overlay `Makefile`s under `patch/kernel/archive/*/overlay/`; in-tree C helpers such as `packages/bsp/boardcon-em3588/rtk_hciattach/`
 - **Device Tree Source** (`.dts` / `.dtsi` / `.dtso`) — board and overlay sources carried under `patch/`
 - **GitHub Actions** (YAML) — repository automation under `.github/workflows/`
 - **Patch series** — thousands of `*.patch` files under `patch/` applied to kernel, U-Boot and ATF trees
