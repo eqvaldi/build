@@ -48,7 +48,7 @@ function interactive_desktop_main_configuration() {
 	# happily cache-hit a pre-configng-change rootfs. Hoisting the
 	# fetch up here makes the clone authoritative for every
 	# BUILD_DESKTOP=yes invocation.
-	fetch_from_repo "https://github.com/armbian/configng" "armbian-configng" "branch:main"
+	fetch_from_repo "https://github.com/eqvaldi/configng" "armbian-configng" "branch:main"
 
 	local configng_dir="${SRC}/cache/sources/armbian-configng"
 	local yaml_dir="${configng_dir}/tools/modules/desktops/yaml"
